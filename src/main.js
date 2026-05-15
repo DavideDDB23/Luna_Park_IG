@@ -1,29 +1,36 @@
 import * as THREE from 'three';
 import Stats from 'stats.js';
 
-import { App }          from './core/App.js';
-import { Loop }         from './core/Loop.js';
-import { Clock }        from './core/Clock.js';
-import { EventBus }     from './core/EventBus.js';
+import { App }           from './core/App.js';
+import { Loop }          from './core/Loop.js';
+import { Clock }         from './core/Clock.js';
+import { EventBus }      from './core/EventBus.js';
 
-import { SceneRoot }    from './scene/SceneRoot.js';
-import { Ground }       from './scene/Ground.js';
-import { Skybox }       from './scene/Skybox.js';
+import { SceneRoot }     from './scene/SceneRoot.js';
+import { Ground }        from './scene/Ground.js';
+import { Skybox }        from './scene/Skybox.js';
+import { Lampposts }     from './scene/Lampposts.js';
 
 import { LightingRig, RIDE_SITES } from './lighting/LightingRig.js';
 
-import { CameraRig }    from './camera/CameraRig.js';
-import { InputRouter }  from './interaction/InputRouter.js';
-import { Raycaster }    from './interaction/Raycaster.js';
-import { HUD }          from './interaction/HUD.js';
-
-import { TweenRegistry }from './animation/TweenRegistry.js';
-import { Composer }     from './post/Composer.js';
+import { CameraRig }     from './camera/CameraRig.js';
+import { ClickToFly }    from './camera/ClickToFly.js';
+import { GondolaCam }    from './camera/GondolaCam.js';
+import { InputRouter }   from './interaction/InputRouter.js';
+import { Raycaster }     from './interaction/Raycaster.js';
+import { HUD }           from './interaction/HUD.js';
 
 import { FerrisWheel }   from './rides/FerrisWheel.js';
+import { Carousel }      from './rides/Carousel.js';
+import { RollerCoaster } from './rides/RollerCoaster.js';
+import { Tagada }        from './rides/Tagada.js';
+
+import { TweenRegistry } from './animation/TweenRegistry.js';
+import { Composer }      from './post/Composer.js';
 
 import { addAxesHelper, printSceneGraph } from './utils/debug.js';
 import { isDebug, initSite }              from './utils/url.js';
+import { matchesBinding }                 from './interaction/KeyMap.js';
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 
@@ -34,61 +41,141 @@ const clock  = new Clock();
 
 // ── Scene graph ─────────────────────────────────────────────────────────────
 
-const root      = new SceneRoot(scene);
-const skybox    = new Skybox(scene);
-const ground    = new Ground(root.world);
-const lighting  = new LightingRig(scene, root.lights);
+const root     = new SceneRoot(scene);
+const skybox   = new Skybox(scene);
+const ground   = new Ground(root.world);
+const lighting = new LightingRig(scene, root.lights);
 
-// ── Rides (M3+) ──────────────────────────────────────────────────────────────
+ground.mesh.userData.pickable = true;
 
-const ferrisWheel = new FerrisWheel(root.rides, RIDE_SITES.ferrisWheel);
-const rides = [ferrisWheel];
+// ── Lampposts ────────────────────────────────────────────────────────────────
 
-// ── Ride-site BoxHelper markers (T-107) ───────────────────────────────────
+const lampposts = new Lampposts(root.world, root.lights);
 
-const MARKER_SIZE = 24;
-for (const [id, pos] of Object.entries(RIDE_SITES)) {
-  const box = new THREE.Box3(
-    new THREE.Vector3(-MARKER_SIZE / 2, 0, -MARKER_SIZE / 2),
-    new THREE.Vector3( MARKER_SIZE / 2, 8,  MARKER_SIZE / 2),
-  ).translate(pos);
-  const helper = new THREE.Box3Helper(box, 0xffff00);
-  helper.name = `site_${id}`;
-  root.world.add(helper);
+// ── Rides ────────────────────────────────────────────────────────────────────
 
-  // Label (debug): small text via a simple sprite is M5+ — skip for now
-}
+const ferrisWheel   = new FerrisWheel(root.rides,   RIDE_SITES.ferrisWheel);
+const carousel      = new Carousel(root.rides,      RIDE_SITES.carousel);
+const rollerCoaster = new RollerCoaster(root.rides, RIDE_SITES.rollerCoaster);
+const tagada        = new Tagada(root.rides,        RIDE_SITES.tagada);
+const rides         = [ferrisWheel, carousel, rollerCoaster, tagada];
 
 // ── Camera ──────────────────────────────────────────────────────────────────
 
-const cameraRig = new CameraRig(camera, renderer);
+const cameraRig  = new CameraRig(camera, renderer);
+const gondolaCam = new GondolaCam(cameraRig, ferrisWheel);
+cameraRig.setGondolaCam(gondolaCam);
 
-// Default overview position
 camera.position.set(0, 55, 80);
 camera.lookAt(0, 0, 0);
 cameraRig._orbit.controls.target.set(0, 0, 0);
 
-// ?site= jump (T-107)
 if (initSite && RIDE_SITES[initSite]) {
-  const sitePos = RIDE_SITES[initSite].clone();
-  camera.position.copy(sitePos).add(new THREE.Vector3(0, 20, 30));
-  camera.lookAt(sitePos);
-  cameraRig._orbit.controls.target.copy(sitePos);
+  const sp = RIDE_SITES[initSite].clone();
+  camera.position.copy(sp).add(new THREE.Vector3(0, 20, 30));
+  camera.lookAt(sp);
+  cameraRig._orbit.controls.target.copy(sp);
 }
 
 // ── Input ───────────────────────────────────────────────────────────────────
 
 const inputRouter = new InputRouter(canvas);
 inputRouter.init();
-const raycaster = new Raycaster(camera, scene);
-void raycaster;
 
-// Mark ground as pickable for ClickToFly (M4)
-ground.mesh.userData.pickable = true;
+// ── Raycaster ────────────────────────────────────────────────────────────────
+
+const raycaster  = new Raycaster(camera, scene);
+const clickToFly = new ClickToFly(cameraRig, ground.mesh);
+
+// Lamppost click handler
+EventBus.on('raycast:hit', ({ object }) => {
+  if (typeof object.userData.lamppostIndex === 'number') {
+    lampposts.toggleLamp(object.userData.lamppostIndex);
+  }
+});
+
+// ── Scroll-wheel ride speed (T-406) ──────────────────────────────────────────
+
+// Track pointer's last NDC for ride focus detection
+let _lastNDC = { x: 0, y: 0 };
+EventBus.on('input:drag', ({ ndc }) => { _lastNDC = ndc; });
+
+const _speedRaycaster = new THREE.Raycaster();
+EventBus.on('input:wheel', ({ dy, ndc }) => {
+  _lastNDC = ndc;
+  _speedRaycaster.setFromCamera(ndc, camera);
+  const hits = _speedRaycaster.intersectObjects(root.rides.children, true);
+  const rideHit = hits.find(h => h.object.userData.rideRef ||
+    h.object.parent?.userData?.rideRef || _findRideGroup(h.object));
+  if (!rideHit) return;
+
+  const rideId = _resolveRideId(rideHit.object);
+  if (!rideId) return;
+  const ride = rides.find(r => r.rideId === rideId);
+  if (!ride || ride.state === 'idle') return;
+
+  const newMult = Math.max(0.2, Math.min(3.0, ride.speedMultiplier - dy * 0.15));
+  ride.setSpeedMultiplier(newMult);
+  EventBus.emit('hud:toast', { msg: `${rideId} speed ×${newMult.toFixed(1)}`, dur: 1200 });
+  hud.updateRideSpeed(rideId, newMult);
+});
+
+function _findRideGroup(obj) {
+  let cur = obj;
+  while (cur) {
+    if (cur.userData?.rideId) return cur;
+    cur = cur.parent;
+  }
+  return null;
+}
+function _resolveRideId(obj) {
+  if (obj.userData.rideRef) return obj.userData.rideRef;
+  let cur = obj.parent;
+  while (cur) {
+    if (cur.name && rides.some(r => r.rideId === cur.name)) return cur.name;
+    cur = cur.parent;
+  }
+  return null;
+}
+
+// Cursor affordance for pickable meshes
+const _hoverRay = new THREE.Raycaster();
+function _updateCursor(ndc) {
+  _hoverRay.setFromCamera(ndc, camera);
+  const hits = _hoverRay.intersectObjects(scene.children, true)
+    .filter(h => h.object.userData.pickable);
+  canvas.style.cursor = hits.length ? 'pointer' : 'default';
+}
+canvas.addEventListener('pointermove', e => {
+  _updateCursor({
+    x:  (e.clientX / window.innerWidth)  * 2 - 1,
+    y: -(e.clientY / window.innerHeight) * 2 + 1,
+  });
+});
 
 // ── HUD ─────────────────────────────────────────────────────────────────────
 
 const hud = new HUD(document.getElementById('hud'));
+hud.addRide('ferrisWheel',   'Ferris Wheel');
+hud.addRide('carousel',      'Carousel');
+hud.addRide('rollerCoaster', 'Roller Coaster');
+hud.addRide('tagada',        'Tagada');
+
+// Keyboard ride quick-fly shortcuts
+const RIDE_FLY_TARGETS = [
+  RIDE_SITES.ferrisWheel, RIDE_SITES.carousel,
+  RIDE_SITES.rollerCoaster, RIDE_SITES.tagada,
+];
+EventBus.on('input:key', ({ code, action }) => {
+  if (action !== 'down') return;
+  [1, 2, 3, 4].forEach((n, i) => {
+    if (matchesBinding(`FLY_RIDE_${n}`, code)) {
+      const p = RIDE_FLY_TARGETS[i].clone().add(new THREE.Vector3(0, 15, 20));
+      cameraRig.flyTo(p, RIDE_FLY_TARGETS[i]);
+    }
+  });
+  if (code === 'KeyT' && isDebug) printSceneGraph(scene);
+});
 
 // ── Post ────────────────────────────────────────────────────────────────────
 
@@ -99,31 +186,35 @@ EventBus.on('input:resize', ({ w, h }) => {
   composer.setSize(w, h);
 });
 
-// ── Debug ───────────────────────────────────────────────────────────────────
+// ── Debug overlay ───────────────────────────────────────────────────────────
 
 let stats = null;
 if (isDebug) {
   stats = new Stats();
   stats.showPanel(0);
-  stats.dom.style.position = 'fixed';
-  stats.dom.style.top  = '0';
-  stats.dom.style.left = '0';
+  stats.dom.style.cssText = 'position:fixed;top:0;left:0;';
   document.getElementById('hud').appendChild(stats.dom);
   addAxesHelper(scene, 10);
 }
 
-EventBus.on('input:key', ({ code }) => {
-  if (code === 'KeyT' && isDebug) printSceneGraph(scene);
-  // Quick toggle for testing via keyboard '1'
-  if (code === 'Digit1') EventBus.emit('ride:toggle', { rideId: 'ferrisWheel' });
-});
+// ── BoxHelper markers ────────────────────────────────────────────────────────
+
+if (isDebug) {
+  for (const [id, pos] of Object.entries(RIDE_SITES)) {
+    const box = new THREE.Box3(
+      new THREE.Vector3(-12, 0, -12), new THREE.Vector3(12, 8, 12),
+    ).translate(pos);
+    const h = new THREE.Box3Helper(box, 0xffff00);
+    h.name = `site_${id}`;
+    root.world.add(h);
+  }
+}
 
 // ── Frame loop (TECHNICAL_ARCHITECTURE §4 order) ──────────────────────────
 
 const loop = new Loop(_tick);
 
 function _tick() {
-  // 1. inputs — flushed via DOM event listeners (InputRouter)
   // 2. clock
   const dt = clock.tick();
   // 3. HUD
@@ -134,8 +225,9 @@ function _tick() {
   TweenRegistry.update(performance.now());
   // 6. rides
   for (const ride of rides) ride.update(dt, clock.elapsed);
-  // 7. lighting — DayNight.update() in M5
-  // 8. passive scene — visitors in M4
+  // 7. lighting
+  lampposts.update(dt);
+  // 8. passive scene (visitors M4+)
   // 9. render
   composer.render();
   // 10. debug
@@ -146,6 +238,5 @@ function _tick() {
 
 loop.start();
 
-const loadingScreen = document.getElementById('loading-screen');
-loadingScreen.classList.add('hidden');
-setTimeout(() => loadingScreen.remove(), 600);
+document.getElementById('loading-screen')?.classList.add('hidden');
+setTimeout(() => document.getElementById('loading-screen')?.remove(), 600);
