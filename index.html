@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Luna Park 3D</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three":          "./vendor/three/build/three.module.js",
+      "three/addons/":  "./vendor/three/examples/jsm/",
+      "tween":          "./vendor/tween/tween.esm.js",
+      "lil-gui":        "./vendor/lil-gui/lil-gui.esm.js",
+      "stats.js":       "./vendor/stats/Stats.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="loading-screen">LUNA PARK 3D — loading…</div>
+  <canvas id="canvas"></canvas>
+  <div id="hud"></div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
