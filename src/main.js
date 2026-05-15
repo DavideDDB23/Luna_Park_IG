@@ -20,6 +20,8 @@ import { HUD }          from './interaction/HUD.js';
 import { TweenRegistry }from './animation/TweenRegistry.js';
 import { Composer }     from './post/Composer.js';
 
+import { FerrisWheel }   from './rides/FerrisWheel.js';
+
 import { addAxesHelper, printSceneGraph } from './utils/debug.js';
 import { isDebug, initSite }              from './utils/url.js';
 
@@ -36,6 +38,11 @@ const root      = new SceneRoot(scene);
 const skybox    = new Skybox(scene);
 const ground    = new Ground(root.world);
 const lighting  = new LightingRig(scene, root.lights);
+
+// ── Rides (M3+) ──────────────────────────────────────────────────────────────
+
+const ferrisWheel = new FerrisWheel(root.rides, RIDE_SITES.ferrisWheel);
+const rides = [ferrisWheel];
 
 // ── Ride-site BoxHelper markers (T-107) ───────────────────────────────────
 
@@ -107,6 +114,8 @@ if (isDebug) {
 
 EventBus.on('input:key', ({ code }) => {
   if (code === 'KeyT' && isDebug) printSceneGraph(scene);
+  // Quick toggle for testing via keyboard '1'
+  if (code === 'Digit1') EventBus.emit('ride:toggle', { rideId: 'ferrisWheel' });
 });
 
 // ── Frame loop (TECHNICAL_ARCHITECTURE §4 order) ──────────────────────────
@@ -123,7 +132,8 @@ function _tick() {
   cameraRig.update(dt);
   // 5. tweens
   TweenRegistry.update(performance.now());
-  // 6. rides — none yet (M3+)
+  // 6. rides
+  for (const ride of rides) ride.update(dt, clock.elapsed);
   // 7. lighting — DayNight.update() in M5
   // 8. passive scene — visitors in M4
   // 9. render
