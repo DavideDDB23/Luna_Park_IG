@@ -11,6 +11,10 @@ import { Ground }        from './scene/Ground.js';
 import { Skybox }        from './scene/Skybox.js';
 import { Lampposts }     from './scene/Lampposts.js';
 import { Furniture }     from './scene/Furniture.js';
+import { Trees }         from './scene/Trees.js';
+import { Visitors }      from './scene/Visitors.js';
+import { WelcomeArch }   from './scene/WelcomeArch.js';
+import { Stands }        from './scene/Stands.js';
 
 import { LightingRig, RIDE_SITES } from './lighting/LightingRig.js';
 import { DayNight }        from './lighting/DayNight.js';
@@ -57,8 +61,12 @@ const matLib = new MaterialLibrary(renderer);
 
 // ── Lampposts + furniture (pass matLib for InstancedMesh materials) ──────────
 
-const lampposts = new Lampposts(root.world, root.lights, matLib);
-const furniture = new Furniture(root.world, matLib);
+const lampposts    = new Lampposts(root.world, root.lights, matLib);
+const furniture    = new Furniture(root.world, matLib);
+const trees        = new Trees(root.world);
+const visitors     = new Visitors(root.world);
+const welcomeArch  = new WelcomeArch(root.world);
+const stands       = new Stands(root.world);
 
 // ── Rides ────────────────────────────────────────────────────────────────────
 
@@ -289,6 +297,16 @@ if (isDebug) {
 // ── Start ───────────────────────────────────────────────────────────────────
 
 loop.start();
+
+// Async model loads — run after loop starts so fallback primitives are visible immediately
+Promise.all([
+  trees.loadAsync(),
+  visitors.loadAsync(),
+  welcomeArch.loadAsync(),
+  stands.loadAsync(),
+  lampposts.loadAsync(root.world),
+  rollerCoaster.loadAsync(),
+]).catch(e => console.warn('[main] async model load error:', e));
 
 document.getElementById('loading-screen')?.classList.add('hidden');
 setTimeout(() => document.getElementById('loading-screen')?.remove(), 600);

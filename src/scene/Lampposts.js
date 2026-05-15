@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import * as TWEEN from 'tween';
+import { AssetLoader } from '../core/AssetLoader.js';
 
 // M6: poles and arms use InstancedMesh (12 instances each) to reduce draw calls.
 // Bulb spheres stay as individual Mesh — they need per-instance material for toggle.
@@ -121,6 +122,33 @@ export class Lampposts {
       })
       .start();
     if (on) this._lights[index].visible = true;
+  }
+
+  // Replace procedural pole+arm instances with the Victorian lamp model.
+  async loadAsync(worldGroup) {
+    const loader = new AssetLoader();
+    const template = await loader.loadModelOrFallback(
+      'assets/models/props/lamppost/scene.gltf',
+      () => null,
+    );
+    if (!template) return;
+
+    for (let i = 0; i < this._positions.length; i++) {
+      const pos   = this._positions[i];
+      const clone = template.clone(true);
+      // Victorian lamp native height ≈ 4m; scale to 5m
+      clone.scale.setScalar(1.25);
+      clone.position.set(pos.x, 0, pos.z);
+      clone.name = `lamppost_${i}`;
+      clone.traverse(n => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = false; } });
+      worldGroup.add(clone);
+    }
+    // Hide procedural InstancedMesh (they're children of worldGroup already added)
+    worldGroup.traverse(n => {
+      if (n.name === 'lampPoleInstanced' || n.name === 'lampArmInstanced') {
+        n.visible = false;
+      }
+    });
   }
 
   update(_dt) {}

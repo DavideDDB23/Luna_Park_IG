@@ -11,10 +11,40 @@
 
 ## 3D Models
 
-No external 3D models are used. All geometry is constructed procedurally via Three.js
-primitives (BoxGeometry, CylinderGeometry, SphereGeometry, TorusGeometry, TubeGeometry,
-CatmullRomCurve3, etc.). The AssetLoader supports dropping `.glb` files into
-`assets/models/` for automatic loading with graceful primitive fallback.
+All models live under `assets/models/`. The engine loads each via `AssetLoader.loadModelOrFallback`
+and falls back to procedural primitives if the file is missing. Animation tracks are stripped
+from every file (course hard constraint: JS-only animations).
+
+### Rides
+
+| File | Title | Author | License |
+|------|-------|--------|---------|
+| `rides/ferris_wheel/` | Wheel Of Brisbane Ferris Wheel (Low-Poly) | Jotrain Models | Sketchfab Standard |
+| `rides/carousel/` | Carousel | Tomas Rubianes | CC-BY-4.0 |
+| `rides/coaster_cart/` | Roller coaster cart | SuperSnazzyBear | CC-BY-4.0 |
+
+### Props
+
+| File | Title | Author | License |
+|------|-------|--------|---------|
+| `props/lamppost/` | Victorian Street Lamp Simplified 1900s | i-m-a-kitty-cat | CC-BY-4.0 |
+| `props/welcome_arch/` | CC0 — Neon Sign Open | plaggy | CC-BY-4.0 |
+| `props/food_stand/` | Stylized Carnival Booth | Keyotine | CC-BY-4.0 |
+| `props/trash_bin/` | City Park Trash Bin Garbage Can Game Ready | KQ92 | CC-BY-4.0 |
+| `props/bench.glb` | Kenney Holiday Kit — bench | Kenney | CC0 |
+| `props/fence.glb` | Kenney Nature Kit — fence_simple | Kenney | CC0 |
+
+### Trees
+
+| File | Source | License |
+|------|--------|---------|
+| `trees/tree_default.glb`, `tree_pine.glb`, `tree_oak.glb`, `tree_small.glb` | Kenney Nature Kit | CC0 |
+
+### Characters (Visitors)
+
+| Files | Source | License |
+|-------|--------|---------|
+| `characters/visitor_male_*.glb`, `visitor_female_*.glb` | Kenney Mini Characters | CC0 |
 
 ## Textures
 

@@ -54,7 +54,7 @@ const SKY_FRAG = /* glsl */`
 
     // ── Night sky ────────────────────────────────────────────────────────────
     vec3 nightSky = mix(vec3(0.04, 0.045, 0.10), vec3(0.01, 0.012, 0.04), smoothstep(-0.1, 0.6, y));
-    nightSky += vec3(stars(dir) * 0.85);
+    nightSky += vec3(stars(dir) * 0.85 * smoothstep(0.3, 0.6, uNight));
     // Milky-way-like faint band
     float band = smoothstep(0.3, 0.0, abs(dot(dir, vec3(0.5, 0.2, 0.84)) - 0.0)) * 0.06;
     nightSky += vec3(0.5, 0.6, 1.0) * band * max(y, 0.0);

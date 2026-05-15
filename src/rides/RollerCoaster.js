@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Ride }         from './Ride.js';
 import { ControlPanel } from './ControlPanel.js';
 import { EventBus }     from '../core/EventBus.js';
+import { AssetLoader }  from '../core/AssetLoader.js';
 
 // ANIM CATEGORY: procedural (Catmull-Rom curve + Frenet frame)
 const BASE_SPEED = 0.06;   // curve-fraction per second at speed×1
@@ -172,6 +173,27 @@ export class RollerCoaster extends Ride {
     }
 
     this.panel.update(elapsed);
+  }
+
+  // Replace procedural cart box with the GLB coaster cart model.
+  async loadAsync() {
+    const loader = new AssetLoader();
+    const model = await loader.loadModelOrFallback(
+      'assets/models/rides/coaster_cart/scene.gltf',
+      () => null,
+    );
+    if (!model) return;
+
+    // Remove old procedural children (chassis, seats, riders)
+    while (this._cart.children.length > 0) {
+      this._cart.remove(this._cart.children[0]);
+    }
+
+    model.scale.setScalar(0.65); // native ~2m wide × 3m long → ~1.3m × 2m at 0.65
+    model.rotation.y = Math.PI;
+    model.traverse(n => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = false; } });
+    this._cart.add(model);
+    this._riders = null; // no longer need rider tilt
   }
 
   dispose() {

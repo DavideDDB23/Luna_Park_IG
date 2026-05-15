@@ -15,13 +15,13 @@ const SUN_KF = [
 
 // Sky keyframes: sky, ground, hemisphere intensity, nightBlend for skybox
 const SKY_KF = [
-  { t: 0.00, sky: new THREE.Color('#0a0e22'), gnd: new THREE.Color('#08080a'), hi: 0.35, nb: 1.00 },
-  { t: 0.22, sky: new THREE.Color('#1a0f30'), gnd: new THREE.Color('#100808'), hi: 0.37, nb: 0.85 },
-  { t: 0.27, sky: new THREE.Color('#ff9a55'), gnd: new THREE.Color('#6a5040'), hi: 0.50, nb: 0.15 },
-  { t: 0.50, sky: new THREE.Color('#bcdfff'), gnd: new THREE.Color('#6a5040'), hi: 0.60, nb: 0.00 },
-  { t: 0.75, sky: new THREE.Color('#ff9a55'), gnd: new THREE.Color('#6a5040'), hi: 0.50, nb: 0.15 },
-  { t: 0.82, sky: new THREE.Color('#5a4585'), gnd: new THREE.Color('#180a18'), hi: 0.37, nb: 0.70 },
-  { t: 1.00, sky: new THREE.Color('#0a0e22'), gnd: new THREE.Color('#08080a'), hi: 0.35, nb: 1.00 },
+  { t: 0.00, sky: new THREE.Color('#1e2d5a'), gnd: new THREE.Color('#0c1020'), hi: 0.50, nb: 1.00 },
+  { t: 0.22, sky: new THREE.Color('#281545'), gnd: new THREE.Color('#180a18'), hi: 0.45, nb: 0.90 },
+  { t: 0.27, sky: new THREE.Color('#ff9a55'), gnd: new THREE.Color('#6a5040'), hi: 0.55, nb: 0.15 },
+  { t: 0.50, sky: new THREE.Color('#bcdfff'), gnd: new THREE.Color('#6a5040'), hi: 0.65, nb: 0.00 },
+  { t: 0.75, sky: new THREE.Color('#ff9a55'), gnd: new THREE.Color('#6a5040'), hi: 0.55, nb: 0.15 },
+  { t: 0.82, sky: new THREE.Color('#5a4585'), gnd: new THREE.Color('#180a18'), hi: 0.42, nb: 0.75 },
+  { t: 1.00, sky: new THREE.Color('#1e2d5a'), gnd: new THREE.Color('#0c1020'), hi: 0.50, nb: 1.00 },
 ];
 
 const ORBIT_TILT = 12 * Math.PI / 180; // 12° tilt so noon sun is not exactly overhead
