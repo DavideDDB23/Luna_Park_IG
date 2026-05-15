@@ -86,12 +86,14 @@ export class Carousel extends Ride {
 
       const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.85, 1.1), horseMat);
       body.name = 'body';
+      body.userData.matKey = 'horse.painted';
       body.position.y = 0.1;
       body.castShadow = true;
       horse.add(body);
 
       const head = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.45, 0.35), horseMat);
       head.name = 'head';
+      head.userData.matKey = 'horse.painted';
       head.position.set(0, 0.5, 0.55);
       head.rotation.x = -0.3;
       horse.add(head);
@@ -103,10 +105,12 @@ export class Carousel extends Ride {
       horse.add(jockey);
       const jBody = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.3, 4, 8), jockeyMat);
       jBody.name = 'body';
+      jBody.userData.matKey = 'horse.painted';
       jBody.position.y = 0.1;
       jockey.add(jBody);
       const jHead = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), jockeyMat);
       jHead.name = 'head';
+      jHead.userData.matKey = 'horse.painted';
       jHead.position.y = 0.38;
       jockey.add(jHead);
 

@@ -12,6 +12,8 @@ import { Skybox }        from './scene/Skybox.js';
 import { Lampposts }     from './scene/Lampposts.js';
 
 import { LightingRig, RIDE_SITES } from './lighting/LightingRig.js';
+import { DayNight }        from './lighting/DayNight.js';
+import { MaterialLibrary } from './materials/MaterialLibrary.js';
 
 import { CameraRig }     from './camera/CameraRig.js';
 import { ClickToFly }    from './camera/ClickToFly.js';
@@ -52,6 +54,10 @@ ground.mesh.userData.pickable = true;
 
 const lampposts = new Lampposts(root.world, root.lights);
 
+// ── Material library (procedural PBR textures, must init after renderer) ─────
+
+const matLib  = new MaterialLibrary(renderer);
+
 // ── Rides ────────────────────────────────────────────────────────────────────
 
 const ferrisWheel   = new FerrisWheel(root.rides,   RIDE_SITES.ferrisWheel);
@@ -59,6 +65,43 @@ const carousel      = new Carousel(root.rides,      RIDE_SITES.carousel);
 const rollerCoaster = new RollerCoaster(root.rides, RIDE_SITES.rollerCoaster);
 const tagada        = new Tagada(root.rides,        RIDE_SITES.tagada);
 const rides         = [ferrisWheel, carousel, rollerCoaster, tagada];
+
+// ── Apply PBR materials to scene geometry ─────────────────────────────────────
+
+matLib.applyToScene(scene);
+
+// Neon rings — attached to ride roots so they orbit with the ride
+(function _addNeonRings() {
+  function ring(parent, radius, y, rot = 0) {
+    const m = new THREE.Mesh(
+      new THREE.TorusGeometry(radius, 0.06, 8, 64),
+      matLib.freshNeon(),
+    );
+    m.name = 'neonRing';
+    m.position.y = y;
+    m.rotation.x = Math.PI / 2 + rot;
+    parent.add(m);
+  }
+  ring(ferrisWheel.root,    12.2, 13, 0);     // around ferris hub
+  ring(carousel._platform,   5.8,  7.3, 0);   // under canopy
+  ring(tagada.root,           3.8,  0.5, 0);  // ground ring
+})();
+
+// Window panels on control-panel pedestals (mat.emissive.window)
+scene.traverse(obj => {
+  if (obj.name !== 'pedestal') return;
+  const win = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.28, 0.18),
+    matLib.get('emissive.window'),
+  );
+  win.name = 'windowPanel';
+  win.position.set(0, 0.42, 0.202);
+  obj.add(win);
+});
+
+// ── Day/night cycle ───────────────────────────────────────────────────────────
+
+const dayNight = new DayNight(lighting, scene, skybox, lampposts, matLib);
 
 // ── Camera ──────────────────────────────────────────────────────────────────
 
@@ -225,14 +268,22 @@ function _tick() {
   TweenRegistry.update(performance.now());
   // 6. rides
   for (const ride of rides) ride.update(dt, clock.elapsed);
-  // 7. lighting
+  // 7. lighting / day-night
   lampposts.update(dt);
+  dayNight.update(dt, clock.elapsed);
   // 8. passive scene (visitors M4+)
   // 9. render
   composer.render();
   // 10. debug
   stats?.update();
 }
+
+// ── Debug helpers ────────────────────────────────────────────────────────────
+if (isDebug) {
+  window.__setTime = t => EventBus.emit('daynight:set', t);
+}
+// Always expose setTime for screenshot tooling (non-destructive)
+window.__setTime = t => EventBus.emit('daynight:set', t);
 
 // ── Start ───────────────────────────────────────────────────────────────────
 

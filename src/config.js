@@ -9,7 +9,7 @@ export const MAX_DRAW_CALLS    = 200;
 
 // Day / night
 export const SUN_RADIUS        = 80;
-export const DAY_TURN_DURATION = 8;      // seconds for a full day cycle when auto-rotating
+export const DAY_TURN_DURATION = 60;     // seconds for a full day cycle when auto-rotating
 export const LAMP_ON_THRESHOLD = 0.15;   // sunElevation below this → lights on
 
 // Rides — defaults (individual ride files may add their own)

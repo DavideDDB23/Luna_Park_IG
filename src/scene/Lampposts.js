@@ -79,11 +79,16 @@ export class Lampposts {
     }
   }
 
-  // Called by DayNight in M5; for M4 just expose toggle
+  // Called by DayNight every frame with a smooth [0,2] intensity value
   setNightIntensity(target) {
     for (let i = 0; i < this._lights.length; i++) {
       if (this._overrides[i] !== null) continue;
       this._intensities[i] = target;
+      this._lights[i].intensity  = target;
+      this._lights[i].visible    = target > 0.02;
+      if (this._bulbs) {
+        this._bulbs[i].material.emissiveIntensity = target / 2.0;
+      }
     }
   }
 
