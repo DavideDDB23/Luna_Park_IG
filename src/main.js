@@ -1,75 +1,138 @@
 import * as THREE from 'three';
-import * as TWEEN from 'tween';
 import Stats from 'stats.js';
-import { App } from './core/App.js';
-import { Loop } from './core/Loop.js';
-import { Clock } from './core/Clock.js';
-import { isDebug } from './utils/url.js';
-import { addAxesHelper } from './utils/debug.js';
 
-// ── Bootstrap ──────────────────────────────────────────────────────────────
+import { App }          from './core/App.js';
+import { Loop }         from './core/Loop.js';
+import { Clock }        from './core/Clock.js';
+import { EventBus }     from './core/EventBus.js';
 
-const canvas  = document.getElementById('canvas');
-const app     = new App(canvas);
+import { SceneRoot }    from './scene/SceneRoot.js';
+import { Ground }       from './scene/Ground.js';
+import { Skybox }       from './scene/Skybox.js';
+
+import { LightingRig, RIDE_SITES } from './lighting/LightingRig.js';
+
+import { CameraRig }    from './camera/CameraRig.js';
+import { InputRouter }  from './interaction/InputRouter.js';
+import { Raycaster }    from './interaction/Raycaster.js';
+import { HUD }          from './interaction/HUD.js';
+
+import { TweenRegistry }from './animation/TweenRegistry.js';
+import { Composer }     from './post/Composer.js';
+
+import { addAxesHelper, printSceneGraph } from './utils/debug.js';
+import { isDebug, initSite }              from './utils/url.js';
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+
+const canvas = document.getElementById('canvas');
+const app    = new App(canvas);
 const { scene, renderer, camera } = app;
-const clock   = new Clock();
+const clock  = new Clock();
 
-// ── Placeholder cube (M1 only — swapped out in M2+) ───────────────────────
+// ── Scene graph ─────────────────────────────────────────────────────────────
 
-const cube = new THREE.Mesh(
-  new THREE.BoxGeometry(2, 2, 2),
-  new THREE.MeshStandardMaterial({ color: 0x22ff88 })
-);
-scene.add(cube);
+const root      = new SceneRoot(scene);
+const skybox    = new Skybox(scene);
+const ground    = new Ground(root.world);
+const lighting  = new LightingRig(scene, root.lights);
 
-// Basic light so the cube isn't black
-const ambient = new THREE.AmbientLight(0xffffff, 0.6);
-const sun     = new THREE.DirectionalLight(0xffffff, 1.4);
-sun.position.set(10, 20, 10);
-scene.add(ambient, sun);
+// ── Ride-site BoxHelper markers (T-107) ───────────────────────────────────
 
-// ── Debug overlay ──────────────────────────────────────────────────────────
+const MARKER_SIZE = 24;
+for (const [id, pos] of Object.entries(RIDE_SITES)) {
+  const box = new THREE.Box3(
+    new THREE.Vector3(-MARKER_SIZE / 2, 0, -MARKER_SIZE / 2),
+    new THREE.Vector3( MARKER_SIZE / 2, 8,  MARKER_SIZE / 2),
+  ).translate(pos);
+  const helper = new THREE.Box3Helper(box, 0xffff00);
+  helper.name = `site_${id}`;
+  root.world.add(helper);
+
+  // Label (debug): small text via a simple sprite is M5+ — skip for now
+}
+
+// ── Camera ──────────────────────────────────────────────────────────────────
+
+const cameraRig = new CameraRig(camera, renderer);
+
+// Default overview position
+camera.position.set(0, 55, 80);
+camera.lookAt(0, 0, 0);
+cameraRig._orbit.controls.target.set(0, 0, 0);
+
+// ?site= jump (T-107)
+if (initSite && RIDE_SITES[initSite]) {
+  const sitePos = RIDE_SITES[initSite].clone();
+  camera.position.copy(sitePos).add(new THREE.Vector3(0, 20, 30));
+  camera.lookAt(sitePos);
+  cameraRig._orbit.controls.target.copy(sitePos);
+}
+
+// ── Input ───────────────────────────────────────────────────────────────────
+
+const inputRouter = new InputRouter(canvas);
+inputRouter.init();
+const raycaster = new Raycaster(camera, scene);
+void raycaster;
+
+// Mark ground as pickable for ClickToFly (M4)
+ground.mesh.userData.pickable = true;
+
+// ── HUD ─────────────────────────────────────────────────────────────────────
+
+const hud = new HUD(document.getElementById('hud'));
+
+// ── Post ────────────────────────────────────────────────────────────────────
+
+const composer = new Composer(renderer, scene, camera);
+
+EventBus.on('input:resize', ({ w, h }) => {
+  app.onResize();
+  composer.setSize(w, h);
+});
+
+// ── Debug ───────────────────────────────────────────────────────────────────
 
 let stats = null;
 if (isDebug) {
   stats = new Stats();
-  stats.showPanel(0);                          // 0 = fps
+  stats.showPanel(0);
   stats.dom.style.position = 'fixed';
-  stats.dom.style.top = '0';
+  stats.dom.style.top  = '0';
   stats.dom.style.left = '0';
   document.getElementById('hud').appendChild(stats.dom);
-  addAxesHelper(scene, 8);
+  addAxesHelper(scene, 10);
 }
 
-// ── Frame loop (TECHNICAL_ARCHITECTURE §4) ─────────────────────────────────
+EventBus.on('input:key', ({ code }) => {
+  if (code === 'KeyT' && isDebug) printSceneGraph(scene);
+});
+
+// ── Frame loop (TECHNICAL_ARCHITECTURE §4 order) ──────────────────────────
 
 const loop = new Loop(_tick);
 
 function _tick() {
+  // 1. inputs — flushed via DOM event listeners (InputRouter)
+  // 2. clock
   const dt = clock.tick();
-
-  // 1. inputs — none yet (InputRouter wired in M2)
-  // 2. clock already ticked above
-  // 3. HUD state — none yet
-  // 4. camera — none yet
+  // 3. HUD
+  hud.update(dt);
+  // 4. camera
+  cameraRig.update(dt);
   // 5. tweens
-  TWEEN.update(performance.now());
-  // 6. rides — none yet
-  // 7. lighting — none yet
-  // 8. passive scene
-  cube.rotation.y += dt * 0.8;
-  cube.rotation.x += dt * 0.3;
+  TweenRegistry.update(performance.now());
+  // 6. rides — none yet (M3+)
+  // 7. lighting — DayNight.update() in M5
+  // 8. passive scene — visitors in M4
   // 9. render
-  renderer.render(scene, camera);
+  composer.render();
   // 10. debug
   stats?.update();
 }
 
-// ── Resize ─────────────────────────────────────────────────────────────────
-
-window.addEventListener('resize', () => app.onResize());
-
-// ── Start ──────────────────────────────────────────────────────────────────
+// ── Start ───────────────────────────────────────────────────────────────────
 
 loop.start();
 
