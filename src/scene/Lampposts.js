@@ -1,75 +1,87 @@
 import * as THREE from 'three';
 import * as TWEEN from 'tween';
 
+// M6: poles and arms use InstancedMesh (12 instances each) to reduce draw calls.
+// Bulb spheres stay as individual Mesh — they need per-instance material for toggle.
+
 const N_LAMPS    = 12;
 const LAMP_COLOR = 0xffcc88;
 const LAMP_DIST  = 14;
 const LAMP_DECAY = 1.6;
 
-// Lamppost positions — spaced along the path cross
 function makeLampPositions() {
   const pts = [];
   const spacing = 12;
-  // N-S path (Z axis)
   for (let i = -2; i <= 2; i++) {
     if (i === 0) continue;
     pts.push(new THREE.Vector3( 4, 0, i * spacing));
     pts.push(new THREE.Vector3(-4, 0, i * spacing));
   }
-  // E-W path (X axis)
-  for (const x of [-30, 30]) {
-    pts.push(new THREE.Vector3(x, 0, 3));
-  }
+  for (const x of [-30, 30]) pts.push(new THREE.Vector3(x, 0, 3));
   return pts.slice(0, N_LAMPS);
 }
 
 export class Lampposts {
-  constructor(worldGroup, lightsGroup) {
-    this._lights       = [];
-    this._intensities  = [];  // target intensity per lamp (0 or 2.0)
-    this._overrides    = [];  // null | true | false per lamp
-    this._positions    = makeLampPositions();
+  constructor(worldGroup, lightsGroup, matLib = null) {
+    this._lights      = [];
+    this._intensities = [];
+    this._overrides   = [];
+    this._bulbs       = [];
+    this._positions   = makeLampPositions();
 
-    const poleMat = new THREE.MeshStandardMaterial({ color: 0x445566, roughness: 0.6, metalness: 0.5 });
-    const bulbMat = new THREE.MeshStandardMaterial({ color: 0xffffee, emissive: 0xffffee, emissiveIntensity: 0, roughness: 0.3 });
+    const poleMat = matLib
+      ? matLib.get('metal.painted')
+      : new THREE.MeshStandardMaterial({ color: 0x445566, roughness: 0.6, metalness: 0.5 });
+
+    // ── Instanced poles (12 × CylinderGeometry) ──────────────────────────────
+    const poleGeo  = new THREE.CylinderGeometry(0.08, 0.10, 5, 8);
+    const poleInst = new THREE.InstancedMesh(poleGeo, poleMat, N_LAMPS);
+    poleInst.name = 'lampPoleInstanced';
+    poleInst.castShadow = true;
+    poleInst.receiveShadow = false;
+
+    // ── Instanced arms ────────────────────────────────────────────────────────
+    const armGeo  = new THREE.CylinderGeometry(0.05, 0.05, 1.2, 6);
+    const armInst = new THREE.InstancedMesh(armGeo, poleMat, N_LAMPS);
+    armInst.name = 'lampArmInstanced';
+    armInst.castShadow = false;
+
+    const mx     = new THREE.Matrix4();
+    const armRot = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, Math.PI / 2));
 
     for (let i = 0; i < this._positions.length; i++) {
       const pos = this._positions[i];
 
-      // Pole
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 5, 8), poleMat);
-      pole.name = `lampPole_${i}`;
-      pole.position.copy(pos).setY(2.5);
-      pole.castShadow = true;
-      pole.matrixAutoUpdate = false;
-      pole.updateMatrix();
-      worldGroup.add(pole);
+      // Pole matrix (centred at y=2.5)
+      mx.makeTranslation(pos.x, 2.5, pos.z);
+      poleInst.setMatrixAt(i, mx);
 
-      // Arm
-      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.2, 6), poleMat);
-      arm.name = `lampArm_${i}`;
-      arm.rotation.z = Math.PI / 2;
-      arm.position.copy(pos).setY(5).add(new THREE.Vector3(0.6, 0, 0));
-      arm.matrixAutoUpdate = false;
-      arm.updateMatrix();
-      worldGroup.add(arm);
+      // Arm matrix (rotated 90° on Z, offset from pole top)
+      mx.compose(
+        new THREE.Vector3(pos.x + 0.6, 5, pos.z),
+        armRot,
+        new THREE.Vector3(1, 1, 1),
+      );
+      armInst.setMatrixAt(i, mx);
 
-      // Bulb sphere (pickable)
-      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), bulbMat.clone());
+      // Bulb — individual Mesh (per-instance emissive toggle)
+      const bulbMat = new THREE.MeshStandardMaterial({
+        color: 0xffffee, emissive: 0xffffee, emissiveIntensity: 0, roughness: 0.3,
+      });
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), bulbMat);
       bulb.name = `lampBulb_${i}`;
-      bulb.position.copy(pos).setY(5).add(new THREE.Vector3(1.2, 0, 0));
-      bulb.userData.pickable        = true;
-      bulb.userData.lamppostIndex   = i;
+      bulb.position.set(pos.x + 1.2, 5, pos.z);
+      bulb.userData.pickable      = true;
+      bulb.userData.lamppostIndex = i;
       bulb.matrixAutoUpdate = false;
       bulb.updateMatrix();
       worldGroup.add(bulb);
-      this._bulbs = this._bulbs ?? [];
       this._bulbs.push(bulb);
 
       // PointLight
       const pt = new THREE.PointLight(LAMP_COLOR, 0, LAMP_DIST, LAMP_DECAY);
       pt.name = `lampPoint_${i}`;
-      pt.position.copy(pos).setY(5.2).add(new THREE.Vector3(1.2, 0, 0));
+      pt.position.set(pos.x + 1.2, 5.2, pos.z);
       pt.userData.lamppostInstance = i;
       lightsGroup.add(pt);
 
@@ -77,6 +89,10 @@ export class Lampposts {
       this._intensities.push(0);
       this._overrides.push(null);
     }
+
+    poleInst.instanceMatrix.needsUpdate = true;
+    armInst.instanceMatrix.needsUpdate  = true;
+    worldGroup.add(poleInst, armInst);
   }
 
   // Called by DayNight every frame with a smooth [0,2] intensity value
@@ -84,23 +100,20 @@ export class Lampposts {
     for (let i = 0; i < this._lights.length; i++) {
       if (this._overrides[i] !== null) continue;
       this._intensities[i] = target;
-      this._lights[i].intensity  = target;
-      this._lights[i].visible    = target > 0.02;
-      if (this._bulbs) {
-        this._bulbs[i].material.emissiveIntensity = target / 2.0;
-      }
+      this._lights[i].intensity = target;
+      this._lights[i].visible   = target > 0.02;
+      this._bulbs[i].material.emissiveIntensity = target / 2.0;
     }
   }
 
   toggleLamp(index) {
     if (index < 0 || index >= this._lights.length) return;
-    const on = this._lights[index].intensity < 0.1;
+    const on   = this._lights[index].intensity < 0.1;
     this._overrides[index] = on;
     const from = { v: this._lights[index].intensity };
     const to   = { v: on ? 2.0 : 0 };
     new TWEEN.Tween(from)
-      .to(to, 600)
-      .easing(TWEEN.Easing.Quadratic.InOut)
+      .to(to, 600).easing(TWEEN.Easing.Quadratic.InOut)
       .onUpdate(() => { this._lights[index].intensity = from.v; })
       .onComplete(() => {
         if (!on) this._lights[index].visible = false;

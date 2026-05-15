@@ -10,6 +10,7 @@ import { SceneRoot }     from './scene/SceneRoot.js';
 import { Ground }        from './scene/Ground.js';
 import { Skybox }        from './scene/Skybox.js';
 import { Lampposts }     from './scene/Lampposts.js';
+import { Furniture }     from './scene/Furniture.js';
 
 import { LightingRig, RIDE_SITES } from './lighting/LightingRig.js';
 import { DayNight }        from './lighting/DayNight.js';
@@ -50,13 +51,14 @@ const lighting = new LightingRig(scene, root.lights);
 
 ground.mesh.userData.pickable = true;
 
-// ── Lampposts ────────────────────────────────────────────────────────────────
+// ── Material library (needs renderer for anisotropy caps — init before geometry) ─
 
-const lampposts = new Lampposts(root.world, root.lights);
+const matLib = new MaterialLibrary(renderer);
 
-// ── Material library (procedural PBR textures, must init after renderer) ─────
+// ── Lampposts + furniture (pass matLib for InstancedMesh materials) ──────────
 
-const matLib  = new MaterialLibrary(renderer);
+const lampposts = new Lampposts(root.world, root.lights, matLib);
+const furniture = new Furniture(root.world, matLib);
 
 // ── Rides ────────────────────────────────────────────────────────────────────
 

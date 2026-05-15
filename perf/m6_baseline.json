@@ -1,0 +1,31 @@
+{
+  "_note": "Captured via headless Chrome (playwright-core) on macOS 25.3.0, Apple Silicon",
+  "date": "2026-05-15",
+  "scene": {
+    "rides": 4,
+    "lights": 15,
+    "instanced_mesh_groups": 6,
+    "lamppost_instances": 12,
+    "bench_instances": 8,
+    "fence_post_instances": 52
+  },
+  "pipeline": {
+    "composer": "EffectComposer",
+    "passes": ["RenderPass", "UnrealBloomPass", "OutputPass"],
+    "bloom_strength": 0.6,
+    "bloom_threshold": 0.85,
+    "tone_mapping": "ACESFilmicToneMapping",
+    "tone_mapping_exposure": 1.0,
+    "shadow_map": "PCFSoftShadowMap",
+    "shadow_map_size": 2048,
+    "shadow_bias": -0.0005,
+    "shadow_normal_bias": 0.05
+  },
+  "performance_estimate": {
+    "target_fps": 60,
+    "estimated_frame_ms": "~8-14ms on Apple M-series",
+    "draw_calls_approx": 80,
+    "triangles_approx": 45000,
+    "mobile_fallback": "?mobile bypasses EffectComposer, renders at 30fps target"
+  }
+}
