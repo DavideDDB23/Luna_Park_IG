@@ -1,0 +1,11 @@
+Model Information:
+* title:	Carousel
+* source:	https://sketchfab.com/3d-models/carousel-892f9fd08d3b4c6ab350dfc9ae658dbe
+* author:	Tomas Rubianes (https://sketchfab.com/rasamot)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Carousel" (https://sketchfab.com/3d-models/carousel-892f9fd08d3b4c6ab350dfc9ae658dbe) by Tomas Rubianes (https://sketchfab.com/rasamot) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
