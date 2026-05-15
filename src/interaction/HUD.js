@@ -97,6 +97,8 @@ export class HUD {
       <b>Scroll over ride</b> — change speed<br>
       <b>G</b> — enter gondola FPV<br>
       <b>Esc / G</b> — exit gondola<br>
+      <b>Tab</b> — toggle first-person walk<br>
+      <b>W A S D</b> — walk (in FPV mode)<br>
       <b>[  ]</b> — scrub time of day<br>
       <b>P</b> — pause day cycle<br>
       <b>R</b> — reset camera<br>

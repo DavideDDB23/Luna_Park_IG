@@ -96,7 +96,7 @@ export class Skybox {
     scene.add(dome);
 
     scene.background = null;
-    scene.fog        = new THREE.Fog(new THREE.Color('#bcdfff'), 60, 220);
+    scene.fog        = new THREE.Fog(new THREE.Color('#bcdfff'), 120, 380);
   }
 
   // Called by DayNight each frame

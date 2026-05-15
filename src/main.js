@@ -15,6 +15,7 @@ import { Trees }         from './scene/Trees.js';
 import { Visitors }      from './scene/Visitors.js';
 import { WelcomeArch }   from './scene/WelcomeArch.js';
 import { Stands }        from './scene/Stands.js';
+import { Intro }         from './scene/Intro.js';
 
 import { LightingRig, RIDE_SITES } from './lighting/LightingRig.js';
 import { DayNight }        from './lighting/DayNight.js';
@@ -118,6 +119,15 @@ const dayNight = new DayNight(lighting, scene, skybox, lampposts, matLib);
 const cameraRig  = new CameraRig(camera, renderer);
 const gondolaCam = new GondolaCam(cameraRig, ferrisWheel);
 cameraRig.setGondolaCam(gondolaCam);
+
+// Walk mode UI
+const _walkCross = document.getElementById('walk-crosshair');
+const _walkBadge = document.getElementById('walk-mode-badge');
+EventBus.on('camera:modeChanged', m => {
+  const isWalk = m === 'walk';
+  _walkCross.style.display = isWalk ? 'block' : 'none';
+  _walkBadge.style.display = isWalk ? 'block' : 'none';
+});
 
 camera.position.set(0, 55, 80);
 camera.lookAt(0, 0, 0);
@@ -297,6 +307,17 @@ if (isDebug) {
 // ── Start ───────────────────────────────────────────────────────────────────
 
 loop.start();
+
+// ── Intro sequence (runs once on boot, then hands control to user) ────────────
+(async () => {
+  const intro = new Intro(scene, camera, cameraRig, root.world);
+  try {
+    await intro.play();
+  } catch (e) {
+    console.warn('[Intro] skipped:', e);
+    cameraRig._orbit.enable();
+  }
+})();
 
 // Async model loads — run after loop starts so fallback primitives are visible immediately
 Promise.all([
