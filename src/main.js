@@ -280,12 +280,11 @@ function _tick() {
   stats?.update();
 }
 
-// ── Debug helpers ────────────────────────────────────────────────────────────
+// ── Debug helpers (only in ?debug mode) ──────────────────────────────────────
 if (isDebug) {
   window.__setTime = t => EventBus.emit('daynight:set', t);
+  window.__bus     = EventBus;
 }
-// Always expose setTime for screenshot tooling (non-destructive)
-window.__setTime = t => EventBus.emit('daynight:set', t);
 
 // ── Start ───────────────────────────────────────────────────────────────────
 
